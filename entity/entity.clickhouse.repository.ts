@@ -35,12 +35,14 @@ export default class EntityClickhouseRepository {
             values: entities,
             format: 'JSONEachRow',
         });
-        const resultSet = await this.client.query({
-            query: `SELECT * FROM ${process.env.CLICKHOUSE_TABLE}`,
-            format: 'JSONEachRow',
-          });
-          const dataset = await resultSet.json();
-          console.log('dataset.length',dataset.length);
+
+        // to check if data is successfully inserted into Clickhouse Db
+        // const resultSet = await this.client.query({
+        //     query: `SELECT * FROM ${process.env.CLICKHOUSE_TABLE}`,
+        //     format: 'JSONEachRow',
+        //   });
+        //   const dataset = await resultSet.json();
+        //   console.log('dataset.length',dataset.length);
     }
     public async remove(){
         if (!this.client){
@@ -49,6 +51,8 @@ export default class EntityClickhouseRepository {
         await this.client.query({
             query: `TRUNCATE TABLE ${process.env.CLICKHOUSE_TABLE}`,
           });
+        
+          // to check if all data is successfully removed from Clickhouse Db
         //   const resultSet = await this.client.query({
         //     query: `SELECT * FROM ${process.env.CLICKHOUSE_TABLE}`,
         //     format: 'JSONEachRow',

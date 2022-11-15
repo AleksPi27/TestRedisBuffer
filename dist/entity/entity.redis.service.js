@@ -41,7 +41,6 @@ class EntityRedisService {
                 entities.push(JSON.parse(entity));
             }
             return entities;
-            // return await this.repository.bulkLoading();
         });
     }
 }

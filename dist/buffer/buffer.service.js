@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BufferService = void 0;
 const entity_clickhouse_service_1 = __importDefault(require("../entity/entity.clickhouse.service"));
 const entity_redis_service_1 = __importDefault(require("../entity/entity.redis.service"));
+const utils_1 = require("./../utils/utils");
 class BufferService {
     constructor() {
         this.isTimerRunning = false;
@@ -25,19 +26,10 @@ class BufferService {
             this.isTimerRunning = false;
         };
     }
-    checkSizeLimit() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const currentSize = yield this.entityRedisService.checkSizeOfBuffer();
-            console.log({ currentSize });
-            console.log('this.getSizeLimit()', this.getSizeLimit());
-            console.log('currentSize===this.getSizeLimit()', currentSize === this.getSizeLimit());
-            return currentSize === this.getSizeLimit();
-        });
-    }
     copyToMainDbIfBufferSizeExceeded() {
         return __awaiter(this, void 0, void 0, function* () {
             const currentSize = yield this.entityRedisService.checkSizeOfBuffer();
-            if (currentSize === this.getSizeLimit()) {
+            if (currentSize === (0, utils_1.getSizeLimit)()) {
                 console.log('limit size excedeed');
                 const entities = yield this.entityRedisService.getAllRecords();
                 yield this.entityClickhouseService.save(entities);
@@ -47,11 +39,13 @@ class BufferService {
                 this.stopInterval();
                 this.startInterval(() => __awaiter(this, void 0, void 0, function* () {
                     const entitiesInBuffer = yield this.entityRedisService.getAllRecords();
-                    yield this.entityClickhouseService.save(entitiesInBuffer);
-                    yield this.entityRedisService.removeAllRecords();
-                    const size = yield this.entityRedisService.checkSizeOfBuffer();
-                    console.log('size', size);
-                }), this.getTimeoutLimit());
+                    if (entities.length > 0) {
+                        yield this.entityClickhouseService.save(entitiesInBuffer);
+                        yield this.entityRedisService.removeAllRecords();
+                        const size = yield this.entityRedisService.checkSizeOfBuffer();
+                        console.log('size', size);
+                    }
+                }), (0, utils_1.getTimeoutLimit)());
             }
         });
     }
@@ -66,14 +60,6 @@ class BufferService {
         return this.isTimerRunning !== false;
     }
     ;
-    getSizeLimit() {
-        const size = process.env.MAX_BUFFER_SIZE;
-        return parseInt(size);
-    }
-    getTimeoutLimit() {
-        const limitMs = process.env.MAX_TIME_BUFFER_INTERVAL;
-        return parseInt(limitMs) * 1000;
-    }
 }
 exports.BufferService = BufferService;
 //# sourceMappingURL=buffer.service.js.map

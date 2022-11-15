@@ -1,24 +1,39 @@
 import * as http from 'http';
 import * as dotenv from 'dotenv';
+import EntityRedisService from './entity/entity.redis.service';
+import { BufferService } from './buffer/buffer.service';
+import EntityClickhouseService from './entity/entity.clickhouse.service';
+import {getTimeoutLimit, getAppPort} from './utils/utils';
 dotenv.config();
-
-console.log(process.env.PORT);
-
-function getPort(): number {
-    const port = process.env.PORT || "3000";
-    return parseInt(port);
-}
-
+const entityRedisService = new EntityRedisService();
+const entityClickhouseService = new EntityClickhouseService();
+const bufferService = new BufferService();
 
 const server = http.createServer((req, res)=>{
-const {headers, method, url} = req;
 let dataToDb: Entity;
-req.on('data', (chunk)=>{
+
+req.on('data',  (chunk)=>{
     dataToDb = Object.assign({}, JSON.parse(chunk));
 });
-req.on('end', ()=>{
-    //write data to REDIS
+
+req.on('end', async ()=>{
+    await entityRedisService.save(dataToDb);
+    await bufferService.copyToMainDbIfBufferSizeExceeded();
     res.writeHead(200);
     res.end();
 })
-}).listen(getPort())
+
+})
+
+server.listen(getAppPort(), () =>{
+    bufferService.startInterval(async () => {
+        const entitiesInBuffer = await entityRedisService.getAllRecords();
+        if (entitiesInBuffer.length>0){
+            await entityClickhouseService.save(entitiesInBuffer);
+            await entityRedisService.removeAllRecords();
+            const size = await entityRedisService.checkSizeOfBuffer();
+            console.log('size', size);
+        }
+    }, getTimeoutLimit());
+}
+);

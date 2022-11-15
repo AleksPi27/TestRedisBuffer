@@ -1,5 +1,6 @@
 import EntityClickhouseService from "../entity/entity.clickhouse.service";
 import EntityRedisService from "../entity/entity.redis.service";
+import {getTimeoutLimit, getSizeLimit} from './../utils/utils';
 
 export class BufferService {
     private isTimerRunning: boolean = false;
@@ -9,7 +10,7 @@ export class BufferService {
 
     public async copyToMainDbIfBufferSizeExceeded(){
         const currentSize = await this.entityRedisService.checkSizeOfBuffer()
-        if (currentSize===this.getSizeLimit()){
+        if (currentSize===getSizeLimit()){
             console.log('limit size excedeed');
             const entities = await this.entityRedisService.getAllRecords();
             await this.entityClickhouseService.save(entities);
@@ -25,7 +26,7 @@ export class BufferService {
                     const size = await this.entityRedisService.checkSizeOfBuffer();
                     console.log('size', size);
                 }
-            }, this.getTimeoutLimit());
+            }, getTimeoutLimit());
         }
     }
 
@@ -45,14 +46,4 @@ export class BufferService {
     private isTimerActive() {
         return this.isTimerRunning !== false;
     };
-
-    private getSizeLimit(): number {
-        const size = process.env.MAX_BUFFER_SIZE;
-        return parseInt(size);
-    }
-
-    private getTimeoutLimit(): number{
-        const limitMs = process.env.MAX_TIME_BUFFER_INTERVAL;
-        return parseInt(limitMs)*1000;
-    }
 }
